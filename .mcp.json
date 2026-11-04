@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "vacuum-rl-mcp": {
+      "command": "python3",
+      "args": ["mcp_server.py"],
+      "description": "CS 440 Lab 5 MCP Server exposing 4x4 Vacuum Q-Learning tools, resources, and prompts over stdio."
+    }
+  }
+}
