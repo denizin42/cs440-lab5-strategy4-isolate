@@ -136,6 +136,20 @@ class TestPart1QLearning:
 class TestPart2HooksAndMemory:
     """Verifies Feature 1: Hooks (.claude/settings.json, scripts/context-switcher.sh, CLAUDE.md)."""
 
+    def test_pre_commit_hook_blocks_main_branch(self) -> None:
+        """Verify `.githooks/pre-commit` and Claude `PreToolUse` hook block direct commits to `main`."""
+        git_hook = REPO_ROOT / ".githooks" / "pre-commit"
+        claude_pre_hook = REPO_ROOT / "scripts" / "prevent-main-commit.sh"
+        settings_path = REPO_ROOT / ".claude" / "settings.json"
+
+        assert git_hook.exists(), ".githooks/pre-commit must exist"
+        assert claude_pre_hook.exists(), "scripts/prevent-main-commit.sh must exist"
+        assert "Direct commits to" in git_hook.read_text(encoding="utf-8")
+
+        data = json.loads(settings_path.read_text(encoding="utf-8"))
+        pre_tool_cmd = data["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
+        assert "scripts/prevent-main-commit.sh" in pre_tool_cmd
+
     def test_part_2a_settings_json_hook_registered(self) -> None:
         """Verify `.claude/settings.json` registers `scripts/context-switcher.sh` under `UserPromptSubmit`."""
         settings_path = REPO_ROOT / ".claude" / "settings.json"
