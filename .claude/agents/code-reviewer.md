@@ -7,9 +7,9 @@
 #   tools: ["Read", "Grep", "Glob"]
 #   model: sonnet
 # ==============================================================================
-name: TODO_PART_4A_SET_AGENT_NAME
-description: TODO_PART_4A_SET_DESCRIPTION
-tools: []
+name: code-reviewer
+description: Specialized code review sub-agent receiving ONLY code diffs and security/encapsulation rules.
+tools: ["Read", "Grep", "Glob"]
 model: sonnet
 ---
 

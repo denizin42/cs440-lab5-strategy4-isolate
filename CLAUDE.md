@@ -39,24 +39,19 @@ You are the **Main Claude Agent (Orchestrator)**. Do not mix broad mathematical 
    - **Scoped Context**: Receives **ONLY** broad architectural queries regarding Q-learning Bellman updates, convergence conditions, and $\epsilon$-greedy vs. optimistic exploration $f(u, n) = u + k/n$; restricted to `["Read", "Grep"]`.
 
 ```javascript
-// ============================================================================
-// TODO (Part 4B - Orchestrator Task Delegation, Slide 34):
-// Replace "TODO_SET_REVIEWER_SUBAGENT" with "code-reviewer" and
-// replace "TODO_SET_RESEARCHER_SUBAGENT" with "researcher".
-// ============================================================================
 
 // Code review agent - focused context (Slide 34)
 Task(
   description: "Code review",
   prompt: "Review this PR focusing only on security, performance, and model-free T/R encapsulation",
-  subagent_type: "TODO_SET_REVIEWER_SUBAGENT"
+  subagent_type: "code-reviewer"
 )
 
 // Research agent - broad architectural query (Slide 34)
 Task(
   description: "Research implementation",
   prompt: "Compare epsilon-greedy vs optimistic exploration f(u,n)=u+k/n for the 4x4 vacuum grid",
-  subagent_type: "TODO_SET_RESEARCHER_SUBAGENT"
+  subagent_type: "researcher"
 )
 ```
 
@@ -91,7 +86,7 @@ When prompted to solve Lab 5, the agent must create `src/environment.py`, `src/a
 TODO (Part 2C - Dynamic Context Imports, Slide 25):
 Uncomment or add the three `@./context/*.md` lines below so Claude Code dynamically
 loads the modular environment, Q-learning, and exploration context files:
-  @./context/environment.md
-  @./context/q-learning.md
-  @./context/exploration.md
 -->
+@./context/environment.md
+@./context/q-learning.md
+@./context/exploration.md

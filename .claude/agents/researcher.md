@@ -7,9 +7,9 @@
 #   tools: ["Read", "Grep"]
 #   model: sonnet
 # ==============================================================================
-name: TODO_PART_4A_SET_AGENT_NAME
-description: TODO_PART_4A_SET_DESCRIPTION
-tools: []
+name: researcher
+description: Specialized reinforcement learning research sub-agent receiving ONLY broad architectural queries.
+tools: ["Read", "Grep"]
 model: sonnet
 ---
 
