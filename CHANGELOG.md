@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Resolved all pylint warnings in mcp_server.py and tests/test_lab5_progress.py (10.00/10)
 
 ### Added
+- Generate EXPERIMENT_REPORT.md with 10,000-episode Q-learning tables, visit counts N(s,a), greedy evaluation metrics, and researcher sub-agent analysis
 - Implement 4x4 Vacuum World Tabular Q-Learning solution (src/environment.py, src/agent.py, src/q_learning.py) and unit tests (tests/test_q_learning.py) via Strategy 4 agent workflow
 - Completed all Context Engineering tests (22/22 green) and updated KANBAN_BOARD.md
 - Finished setup of CLAUDE.md file and mcp server and skill and subagents to get all tests green

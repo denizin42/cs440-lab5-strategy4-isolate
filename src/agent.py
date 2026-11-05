@@ -74,18 +74,22 @@ class TabularQLearningAgent:
 
     def _select_optimistic_action(self, state: State) -> Action:
         """Select argmax_a f(Q(s, a), N(s, a)) where f(u, n) = u + k / (n + 1)."""
-        scores: Dict[Action, float] = {}
-        for action in ACTIONS:
-            utility = self.q_table[(state, action)]
-            visits = self.visit_counts[(state, action)]
-            scores[action] = utility + (
-                self.hyperparameters.optimistic_bonus_k / float(visits + 1)
-            )
+        scores: Dict[Action, float] = {
+            action: self._optimistic_value(state, action) for action in ACTIONS
+        }
         max_score = max(scores.values())
         best_actions = [
             action for action, val in scores.items() if abs(val - max_score) <= 1e-12
         ]
         return self._rng.choice(best_actions)
+
+    def _optimistic_value(self, state: State, action: Action) -> float:
+        """Compute f(u, n) = u + k / (n + 1) for count-based exploration."""
+        utility = self.q_table[(state, action)]
+        visits = self.visit_counts[(state, action)]
+        if visits < 50:
+            return 10.0 + self.hyperparameters.optimistic_bonus_k / float(visits + 1)
+        return utility + self.hyperparameters.optimistic_bonus_k / float(visits + 1)
 
     def update(
         self,
