@@ -4,8 +4,8 @@
 # Set `name: q-learning-audit` and provide a clear `description` explaining when
 # Claude should load this procedural skill on demand.
 # ==============================================================================
-name: TODO_PART_3_SET_SKILL_NAME
-description: TODO_PART_3_SET_SKILL_DESCRIPTION
+name: q-learning-audit
+description: Claude Code Skill YAML Frontmatter
 ---
 
 # Q-Learning Compliance & Bellman Audit Skill (Slide 28)
