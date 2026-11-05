@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Resolved all pylint warnings in mcp_server.py and tests/test_lab5_progress.py (10.00/10)
 
 ### Added
+- Add zero-prompt autonomous demo protocol in CLAUDE.md, AGENTS.md symlink, pre-approved tool permissions in .claude/settings.json, and scripts/demo-reset.sh
 - Completed all Context Engineering tests (22/22 green) and updated KANBAN_BOARD.md
 - Finished setup of CLAUDE.md file and mcp server and skill and subagents to get all tests green
 - Added GitHub Actions Pylint CI workflow (.github/workflows/pylint.yml)

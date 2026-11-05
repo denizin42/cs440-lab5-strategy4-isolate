@@ -1,4 +1,20 @@
 {
+  "permissions": {
+    "allow": [
+      "Read",
+      "Write",
+      "Edit",
+      "MultiEdit",
+      "Glob",
+      "Grep",
+      "Task",
+      "Bash(python3 *)",
+      "Bash(pytest *)",
+      "Bash(pylint *)",
+      "Bash(git *)",
+      "Bash(bash *)"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {

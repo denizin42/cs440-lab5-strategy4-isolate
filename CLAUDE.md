@@ -76,8 +76,25 @@ Row \ Col    0        1        2        3
 | Learning Rate ($\alpha$) | `learning_rate_alpha` | `0.10` |
 | Exploration Rate ($\epsilon$) | `exploration_epsilon` | `0.20` |
 
-### Agent Implementation Instructions for `src/`
-When prompted to solve Lab 5, the agent must create `src/environment.py`, `src/agent.py`, and `src/q_learning.py` (runnable via `python3 -m src.q_learning`) using the hyperparameters above, explicit PEP 484 type annotations, and strict black-box encapsulation of $T$ and $R$.
+### Agent Implementation Instructions for `src/` (Autonomous Zero-Prompt Protocol)
+**CRITICAL DIRECTIVE FOR THE AGENT**: Do **NOT** ask the user any clarifying questions or pause for confirmation. Execute the entire workflow below end-to-end autonomously in a single run:
+
+1. **Branch Isolation (`PreToolUse` Hook Compliance)**:
+   - Check the current branch (`git branch --show-current`). If on `main`, immediately create or switch to a feature branch: `git checkout -B feat/live-demo-q-learning`.
+2. **MCP Hyperparameter Audit**:
+   - Call `get_hyperparameters_resource()`, `verify_hyperparameters(-0.04, 0.90, 0.10, 0.20)`, and `audit_hyperparameters_prompt(-0.04)` from `mcp_server.py` and print the verification output.
+3. **Generate Model-Free Q-Learning Implementation in `src/`**:
+   - Create `src/__init__.py`, `src/environment.py` (`VacuumGridEnv` with private $T$ and $R$), `src/agent.py` (`QLearningHyperparameters` and `TabularQLearningAgent` supporting both `epsilon_greedy` and `optimistic` $f(u, n) = u + k/(n+1)$ with $k=2.0$), `src/q_learning.py`, and `tests/test_q_learning.py`.
+   - Enforce PEP 484 type annotations, lines `<= 100` characters, module/class/function docstrings, zero future bootstrap (`0.0`) when `done=True`, and uniform random tie-breaking.
+4. **Execute Full Learning Experiment & Publish Report**:
+   - Run `python3 -m src.q_learning` to train for **10,000 episodes** (`max_steps=100`, `seed=42`) and evaluate the greedy policy ($\epsilon = 0$) over **1,000 test episodes** for both `epsilon_greedy` and `optimistic` exploration modes.
+   - Print the learned state utilities $V(s) = \max_a Q(s, a)$, greedy policy grid $\pi^*(s) = \arg\max_a Q(s, a)$, and evaluation metrics to stdout, and write the complete report (including full $Q(s, a)$ and visit count $N(s, a)$ tables) to `EXPERIMENT_REPORT.md`.
+5. **Delegate Sub-Agent Audits (Strategy 4: Isolate)**:
+   - Invoke the isolated `code-reviewer` sub-agent to audit `src/` for model-free $T/R$ encapsulation, terminal state boundaries, and type safety.
+   - Invoke the isolated `researcher` sub-agent to compare $\epsilon$-greedy vs. optimistic exploration $f(u, n)$ and include its summary in `EXPERIMENT_REPORT.md`.
+6. **Verify Tests, Pylint (`10.00/10`), and Changelog**:
+   - Run `python3 -m pytest -v` and `python3 -m pylint mcp_server.py tests/*.py src/*.py` (fixing any warnings until rated `10.00/10`).
+   - Stage a Keep-a-Changelog entry via `bash scripts/changelog-add.sh Added "Implement 4x4 Vacuum World Q-Learning solution and EXPERIMENT_REPORT.md"` and commit on the feature branch.
 
 ---
 
