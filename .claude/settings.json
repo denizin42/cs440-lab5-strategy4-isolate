@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "TODO_PART_2A: Replace with bash \"$CLAUDE_PROJECT_DIR/scripts/context-switcher.sh\"",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/context-switcher.sh\"",
             "timeout": 10
           }
         ]
