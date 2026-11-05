@@ -100,10 +100,11 @@ def verify_hyperparameters(
     2. Return a summary string confirming the 4 values are valid.
     ===========================================================================
     """
-    # TODO (Part 5A): Replace the NotImplementedError below with validation + return string
-    raise NotImplementedError(
-        "TODO (Part 5A): Implement `verify_hyperparameters` in `mcp_server.py`."
-    )
+    conditions = [0 < learning_rate_alpha <= 1, 0 < discount_gamma <= 1, living_reward < 0, 0 <= exploration_epsilon <= 1]
+    if all(conditions):
+        return "4 hyperparameter ranges are valid"
+    else:
+        raise ValueError("Error, invalid hyperparameters")
 
 
 # ==============================================================================
@@ -131,11 +132,12 @@ def get_hyperparameters_resource() -> Dict[str, float]:
       }
     ===========================================================================
     """
-    # TODO (Part 5B): Replace the NotImplementedError below with the dictionary return
-    raise NotImplementedError(
-        "TODO (Part 5B): Implement `get_hyperparameters_resource` in `mcp_server.py`."
-    )
-
+    return {
+                "living_reward": -0.04,
+                "discount_gamma": 0.90,
+                "learning_rate_alpha": 0.10,
+                "exploration_epsilon": 0.20,
+            }
 
 # ==============================================================================
 # 3. MCP PROMPTS (`@mcp.prompt` — Slides 24–28)
@@ -159,10 +161,9 @@ def audit_hyperparameters_prompt(
        reach the Recharge Goal `+10` at `(3, 3)`.
     ===========================================================================
     """
-    # TODO (Part 5C): Replace the NotImplementedError below with your prompt string
-    raise NotImplementedError(
-        "TODO (Part 5C): Implement `audit_hyperparameters_prompt` in `mcp_server.py`."
-    )
+    prompt = "Call verify_hyperparameters with living_reward.\n Generate and run the 4x4 Vacuum Q-Learning solution in src/ and verify the policy avoids Obstacle X at (1, 1) and Trap -1 at (3, 1)\n to reach the Recharge Goal +10 at (3, 3)."
+    return prompt
+        
 
 
 if __name__ == "__main__":
