@@ -34,11 +34,9 @@ You are the **Main Claude Agent (Orchestrator)**. Do not mix broad mathematical 
 
 1. **`code-reviewer` (`.claude/agents/code-reviewer.md`)**:
    - **Scoped Context**: Receives **ONLY** the code diff (`git diff`) and security/encapsulation rules; restricted to read-only tools `["Read", "Grep", "Glob"]`.
-   - **Purpose**: Verify that `TabularQLearningAgent` never reads hidden $T(s,a,s')$ or $R(s,a,s')$ tables inside `VacuumGridEnv` and that terminal state boundaries (`done=True`) are respected.
+   - **Purpose**: Verify that the learning agent generated in `src/` never reads hidden $T(s,a,s')$ or $R(s,a,s')$ tables and that terminal state boundaries (`done=True`) are respected.
 2. **`researcher` (`.claude/agents/researcher.md`)**:
    - **Scoped Context**: Receives **ONLY** broad architectural queries regarding Q-learning Bellman updates, convergence conditions, and $\epsilon$-greedy vs. optimistic exploration $f(u, n) = u + k/n$; restricted to `["Read", "Grep"]`.
-3. **Process-Isolated MCP Execution (`mcp_server.py` + `.mcp.json`)**:
-   - Runs 8,000 stochastic Q-learning training episodes in an isolated subprocess over `stdio` via `@mcp.tool` (`run_q_learning_experiment`), returning only the converged 4x4 utilities and policy grid to the orchestrator.
 
 ```javascript
 // ============================================================================
@@ -64,7 +62,7 @@ Task(
 
 ---
 
-## 3. Domain Isolation Boundary: 4x4 Vacuum Grid with Unknown $T$ and $R$
+## 3. Domain Isolation Boundary & Selected Hyperparameters
 ```text
 Row \ Col    0        1        2        3
    0      [start]  [  0  ]  [  0  ]  [  0  ]
@@ -72,8 +70,19 @@ Row \ Col    0        1        2        3
    2      [  0  ]  [  0  ]  [  0  ]  [  0  ]
    3      [  0  ]  [ -1  ]  [  0  ]  [ +10 ]
 ```
-- **Strict Object Encapsulation**: `VacuumGridEnv` (`src/environment.py`) isolates the private transition probabilities (`0.8` intended, `0.1` slip left, `0.1` slip right) and reward table (`+10.0` at `(3,3)`, `-1.0` at `(3,1)`, `living_reward` elsewhere) from `TabularQLearningAgent` (`src/agent.py`).
+- **Strict Object Encapsulation**: When generating the Python solution in `src/`, the environment simulator must isolate private transition probabilities (`0.8` intended, `0.1` slip left, `0.1` slip right) and reward lookup (`+10.0` at `(3,3)`, `-1.0` at `(3,1)`, `living_reward` elsewhere) from the learning agent.
 - **Branch Isolation (`PreToolUse` Hook)**: `.claude/settings.json` invokes `scripts/prevent-main-commit.sh` to isolate the `main` branch from direct agent commits.
+
+### Selected Q-Learning Hyperparameters (Agent Must Use These Values When Generating `src/`)
+| Hyperparameter | Variable Name | Selected Value |
+| :--- | :--- | :--- |
+| Living Reward | `living_reward` | `-0.04` |
+| Discount Factor ($\gamma$) | `discount_gamma` | `0.90` |
+| Learning Rate ($\alpha$) | `learning_rate_alpha` | `0.10` |
+| Exploration Rate ($\epsilon$) | `exploration_epsilon` | `0.20` |
+
+### Agent Implementation Instructions for `src/`
+When prompted to solve Lab 5, the agent must create `src/environment.py`, `src/agent.py`, and `src/q_learning.py` (runnable via `python3 -m src.q_learning`) using the hyperparameters above, explicit PEP 484 type annotations, and strict black-box encapsulation of $T$ and $R$.
 
 ---
 

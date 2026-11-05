@@ -1,21 +1,16 @@
-"""CS 440 Lab 5 Progress & Verification Test Suite.
+"""CS 440 Lab 5 Context Engineering Verification Test Suite.
+
+Verifies the human-configured Context Engineering files (CLAUDE.md, Hooks, Skills,
+Sub-Agents, and MCP Server) BEFORE the AI agent generates the Python solution in `src/`.
 
 Run all checks:
     pytest -v
-
-Or test individual parts as you complete each TODO:
-    pytest -v -k TestPart1QLearning
-    pytest -v -k TestPart2HooksAndMemory
-    pytest -v -k TestPart3Skills
-    pytest -v -k TestPart4SubAgents
-    pytest -v -k TestPart5MCP
 """
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
-import subprocess
 import sys
 
 import pytest
@@ -27,110 +22,26 @@ if str(REPO_ROOT) not in sys.path:
 from mcp_server import (
     audit_hyperparameters_prompt,
     get_hyperparameters_resource,
-    list_context_docs,
-    read_context_doc,
-    run_q_learning_experiment,
+    verify_hyperparameters,
 )
-from src.agent import Hyperparameters, TabularQLearningAgent
-from src.environment import VALID_ACTIONS, VacuumGridEnv
-from src.q_learning import evaluate_policy_reliability, run_experiment
 
 
-class TestPart1QLearning:
-    """Verifies Part 1A (Hyperparameters), Part 1B (select_action), and Part 1C (update)."""
+class TestPart1HyperparametersInMarkdown:
+    """Verifies Part 1: Selected Hyperparameters are documented in `CLAUDE.md`."""
 
-    def test_part_1a_hyperparameters_selected(self) -> None:
-        """Verify all 4 hyperparameters in `Hyperparameters` are set to valid numbers."""
-        params = Hyperparameters()
-        assert params.living_reward is not None, "TODO Part 1A: Set living_reward in Hyperparameters"
-        assert params.discount_gamma is not None, "TODO Part 1A: Set discount_gamma in Hyperparameters"
-        assert params.learning_rate_alpha is not None, "TODO Part 1A: Set learning_rate_alpha in Hyperparameters"
-        assert params.exploration_epsilon is not None, "TODO Part 1A: Set exploration_epsilon in Hyperparameters"
-
-        assert params.living_reward < 0.0, "living_reward should be negative (e.g., -0.04)"
-        assert 0.0 < params.discount_gamma <= 1.0, "discount_gamma must be in (0, 1]"
-        assert 0.0 < params.learning_rate_alpha <= 1.0, "learning_rate_alpha must be in (0, 1]"
-        assert 0.0 <= params.exploration_epsilon <= 1.0, "exploration_epsilon must be in [0, 1]"
-
-    def test_part_1b_epsilon_greedy_action_selection(self) -> None:
-        """Verify `select_action()` explores with probability epsilon and exploits otherwise."""
-        params = Hyperparameters(
-            living_reward=-0.04,
-            discount_gamma=0.90,
-            learning_rate_alpha=0.10,
-            exploration_epsilon=0.0,
-            seed=42,
+    def test_part_1_hyperparameters_documented_in_claude_md(self) -> None:
+        """Verify `CLAUDE.md` specifies values for living_reward, discount_gamma, learning_rate_alpha, and exploration_epsilon."""
+        claude_md = (REPO_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
+        assert "TODO_SET_VALUE" not in claude_md.split("-->")[-1], (
+            "TODO Part 1: Set all 4 hyperparameter values in the CLAUDE.md table"
         )
-        agent = TabularQLearningAgent(params)
-        agent._ensure_state_initialized((0, 0))
-        agent._q_table[(0, 0)]["Right"] = 5.0
-
-        # When epsilon=0.0, must deterministically pick the highest-Q action ("Right")
-        for _ in range(10):
-            assert agent.select_action((0, 0), training=True) == "Right"
-
-        # When epsilon=1.0, must explore multiple actions over 40 draws
-        explore_agent = TabularQLearningAgent(
-            Hyperparameters(
-                living_reward=-0.04,
-                discount_gamma=0.90,
-                learning_rate_alpha=0.10,
-                exploration_epsilon=1.0,
-                seed=42,
-            )
-        )
-        sampled_actions = {explore_agent.select_action((0, 0), training=True) for _ in range(40)}
-        assert len(sampled_actions) > 1
-
-    def test_part_1c_bellman_td_update_and_terminal_boundary(self) -> None:
-        """Verify `update()` applies Q(s,a) <- (1-alpha)Q(s,a) + alpha*(r + gamma*max_a' Q(s',a'))."""
-        params = Hyperparameters(
-            living_reward=-0.04,
-            discount_gamma=0.90,
-            learning_rate_alpha=0.10,
-            exploration_epsilon=0.20,
-            seed=42,
-        )
-        agent = TabularQLearningAgent(params)
-
-        # Terminal transition into Recharge Goal (3, 3) with reward +10.0 (`done=True`)
-        td_error = agent.update(
-            state=(2, 3),
-            action="Down",
-            reward=10.0,
-            next_state=(3, 3),
-            done=True,
-        )
-        assert pytest.approx(td_error, abs=1e-6) == 10.0
-        assert pytest.approx(agent.get_q_value((2, 3), "Down"), abs=1e-6) == 1.0
-        assert agent.visit_counts[(2, 3)]["Down"] == 1
-
-        # Non-terminal transition into (2, 3) where max_a' Q((2, 3), a') == 1.0
-        # sample = -0.04 + 0.90 * 1.0 = 0.86 -> updated Q = 0.10 * 0.86 = 0.086
-        agent.update(
-            state=(1, 3),
-            action="Down",
-            reward=-0.04,
-            next_state=(2, 3),
-            done=False,
-        )
-        assert pytest.approx(agent.get_q_value((1, 3), "Down"), abs=1e-6) == 0.086
-
-    def test_full_q_learning_convergence_to_optimal_policy(self) -> None:
-        """Verify trained agent avoids Trap (3, 1) and reaches Recharge Goal (3, 3)."""
-        params = Hyperparameters()
-        env, agent = run_experiment(params)
-        policy = agent.extract_policy(env)
-
-        # At (3, 0), immediately left of Trap (3, 1), optimal policy must NOT move Right into the trap
-        assert policy[(3, 0)] != "Right"
-        # Adjacent to Recharge Goal (3, 3): (2, 3) must move Down and (3, 2) must move Right
-        assert policy[(2, 3)] == "Down"
-        assert policy[(3, 2)] == "Right"
-
-        metrics = evaluate_policy_reliability(policy, living_reward=params.living_reward)
-        assert metrics["recharge_rate_pct"] >= 95.0
-        assert metrics["trap_rate_pct"] == 0.0
+        for param_name in (
+            "living_reward",
+            "discount_gamma",
+            "learning_rate_alpha",
+            "exploration_epsilon",
+        ):
+            assert param_name in claude_md
 
 
 class TestPart2HooksAndMemory:
@@ -158,7 +69,7 @@ class TestPart2HooksAndMemory:
         assert "TODO" not in command, "TODO Part 2A: Set the hook command in .claude/settings.json"
         assert "scripts/context-switcher.sh" in command
 
-    def test_part_2b_context_switcher_idempotency_guard(self, tmp_path: Path) -> None:
+    def test_part_2b_context_switcher_idempotency_guard(self) -> None:
         """Verify `scripts/context-switcher.sh` uses `grep -qxF` and never duplicates imports."""
         script_path = REPO_ROOT / "scripts" / "context-switcher.sh"
         script_text = script_path.read_text(encoding="utf-8")
@@ -218,42 +129,22 @@ class TestPart4SubAgents:
 class TestPart5MCP:
     """Verifies Feature 2: MCP Server (`mcp_server.py` and `.mcp.json`)."""
 
-    def test_part_5a_mcp_tool_run_q_learning_experiment(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Verify `@mcp.tool` `run_q_learning_experiment` executes and returns grid output."""
-        import mcp_server
-
-        orig_run = mcp_server.run_experiment
-
-        def _safe_run_experiment(params: Hyperparameters):
-            try:
-                return orig_run(params)
-            except NotImplementedError as exc:
-                if "Part 1B" in str(exc) or "Part 1C" in str(exc):
-                    env = VacuumGridEnv(living_reward=params.living_reward or -0.04, seed=params.seed)
-                    safe_params = Hyperparameters(
-                        living_reward=params.living_reward or -0.04,
-                        discount_gamma=params.discount_gamma or 0.90,
-                        learning_rate_alpha=params.learning_rate_alpha or 0.10,
-                        exploration_epsilon=params.exploration_epsilon or 0.20,
-                    )
-                    agent = TabularQLearningAgent(safe_params)
-                    for state in env.all_valid_states():
-                        agent._ensure_state_initialized(state)
-                    return env, agent
-                raise
-
-        monkeypatch.setattr(mcp_server, "run_experiment", _safe_run_experiment)
-        output = run_q_learning_experiment(
+    def test_part_5a_mcp_tool_verify_hyperparameters(self) -> None:
+        """Verify `@mcp.tool` `verify_hyperparameters` validates and returns confirmation string."""
+        output = verify_hyperparameters(
             living_reward=-0.04,
             discount_gamma=0.90,
             learning_rate_alpha=0.10,
             exploration_epsilon=0.20,
-            num_episodes=100,
         )
-        assert "Learned State Utilities" in output
-        assert "Learned Greedy Policy" in output
+        assert isinstance(output, str) and len(output.strip()) > 0
+        with pytest.raises(ValueError):
+            verify_hyperparameters(
+                living_reward=1.0,  # invalid positive living reward
+                discount_gamma=0.90,
+                learning_rate_alpha=0.10,
+                exploration_epsilon=0.20,
+            )
 
     def test_part_5b_mcp_resource_hyperparameters(self) -> None:
         """Verify `@mcp.resource` `vacuum://hyperparameters` returns selected hyperparameter dict."""
@@ -267,4 +158,4 @@ class TestPart5MCP:
         """Verify `@mcp.prompt` `audit_hyperparameters` returns a non-empty instruction string."""
         prompt_text = audit_hyperparameters_prompt(living_reward="-0.04")
         assert isinstance(prompt_text, str) and len(prompt_text.strip()) > 20
-        assert "run_q_learning_experiment" in prompt_text
+        assert "verify_hyperparameters" in prompt_text

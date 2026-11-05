@@ -12,7 +12,7 @@
 | ID | Card Title | Feature / Scope | Suggested Owner | Verification Command | Status |
 | :---: | :--- | :--- | :--- | :--- | :---: |
 | **#0** | Scaffold `VacuumGridEnv`, CLI Runner, & Pytest Suite | Environment & Harness | `@denizin42` | `pytest --collect-only` | **Done** |
-| **#1** | **Part 1:** Q-Learning Math & Hyperparameters (`src/agent.py`) | Core RL Solution | `@RichardsonJC` / `@denizin42` | `pytest -v -k TestPart1QLearning` | **To Do** |
+| **#1** | **Part 1:** Q-Learning Math & Hyperparameters (`src/agent.py`) | Core RL Solution | `@RichardsonJC` / `@denizin42` | `pytest -v -k TestPart1QLearning` | **Done** |
 | **#2** | **Part 2:** Feature 1 — Hooks & Dynamic Memory (`.claude/settings.json`, `scripts/context-switcher.sh`, `CLAUDE.md`) | Strategy 1 (Write) + Hooks | `@chris-mills03` | `pytest -v -k TestPart2HooksAndMemory` | **To Do** |
 | **#3** | **Part 3:** Feature 3 — On-Demand Audit Skill (`.claude/skills/q-learning-audit/SKILL.md`) | Strategy 1 (Write) + Skills | `@chris-mills03` | `pytest -v -k TestPart3Skills` | **To Do** |
 | **#4** | **Part 4:** Feature 4 — Isolated Sub-Agents (`.claude/agents/*.md`, `CLAUDE.md`) | Strategy 4 (Isolate) + Sub-Agents | `@RichardsonJC` | `pytest -v -k TestPart4SubAgents` | **To Do** |

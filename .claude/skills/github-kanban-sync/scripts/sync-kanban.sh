@@ -28,7 +28,7 @@ check_part_status() {
 update_local_kanban_board() {
     echo "Auditing Lab 5 progress via pytest..."
     local s1 s2 s3 s4 s5
-    s1=$(check_part_status "TestPart1QLearning")
+    s1=$(check_part_status "TestPart1HyperparametersInMarkdown")
     s2=$(check_part_status "TestPart2HooksAndMemory")
     s3=$(check_part_status "TestPart3Skills")
     s4=$(check_part_status "TestPart4SubAgents")

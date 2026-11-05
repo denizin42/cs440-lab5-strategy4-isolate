@@ -1,8 +1,8 @@
 """CS 440 Lab 5 — Feature 2: Model Context Protocol (MCP) Server.
 
 Reference: MCP with Claude Lecture (Slides 3, 14, 21, 25, 28)
-Exposes the three MCP building blocks for the 4x4 Vacuum Q-Learning project:
-  1. Tools     (`@mcp.tool`)     — Actions Claude can invoke (run Q-learning, read docs)
+Exposes the three MCP building blocks to guide the AI agent on the 4x4 Vacuum Q-Learning task:
+  1. Tools     (`@mcp.tool`)     — Actions the agent can invoke (`read_context_doc`, `verify_hyperparameters`)
   2. Resources (`@mcp.resource`) — Read-only data exposed like GET handlers (`vacuum://...`)
   3. Prompts   (`@mcp.prompt`)   — Reusable, tested instruction templates (`/audit_hyperparameters`)
 """
@@ -53,14 +53,6 @@ except ImportError:  # Lightweight fallback when `mcp` SDK is not installed in s
             print(f"[{self.name}] MCP server initialized with {len(self.tools)} tools, "
                   f"{len(self.resources)} resources, and {len(self.prompts)} prompts.")
 
-from src.agent import Hyperparameters
-from src.q_learning import (
-    evaluate_policy_reliability,
-    format_policy_grid,
-    format_utilities_grid,
-    run_experiment,
-)
-
 mcp = FastMCP("VacuumRLMCP", log_level="ERROR")
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -89,30 +81,28 @@ def read_context_doc(
 
 
 @mcp.tool(
-    name="run_q_learning_experiment",
-    description="Train the Model-Free Tabular Q-Learning agent on the 4x4 Vacuum Grid and return utilities, policy, and evaluation metrics.",
+    name="verify_hyperparameters",
+    description="Validate the 4 Q-Learning hyperparameters before the agent generates or runs the experiment.",
 )
-def run_q_learning_experiment(
+def verify_hyperparameters(
     living_reward: float = Field(default=-0.04, description="Step reward on non-terminal cells"),
     discount_gamma: float = Field(default=0.90, description="Discount factor gamma in (0, 1]"),
     learning_rate_alpha: float = Field(default=0.10, description="TD learning rate alpha in (0, 1]"),
     exploration_epsilon: float = Field(default=0.20, description="Epsilon-greedy exploration rate in [0, 1]"),
-    num_episodes: int = Field(default=4000, description="Number of training episodes"),
 ) -> str:
-    """Run tabular Q-learning with the given hyperparameters and return a formatted summary.
+    """Validate hyperparameter ranges and return a confirmation string for the agent.
 
     ===========================================================================
     TODO (Part 5A - MCP Tool Implementation, Slide 14):
-    1. Construct `params = Hyperparameters(living_reward=living_reward, discount_gamma=discount_gamma, learning_rate_alpha=learning_rate_alpha, exploration_epsilon=exploration_epsilon, num_episodes=num_episodes)`.
-    2. Call `env, agent = run_experiment(params)`.
-    3. Extract `utilities = agent.extract_utilities(env)` and `policy = agent.extract_policy(env)`.
-    4. Return a formatted string containing both `format_utilities_grid(env, utilities)`
-       and `format_policy_grid(env, policy)`.
+    1. Check that `living_reward < 0`, `0 < discount_gamma <= 1`,
+       `0 < learning_rate_alpha <= 1`, and `0 <= exploration_epsilon <= 1`
+       (raise `ValueError` if invalid, following Slide 14).
+    2. Return a summary string confirming the 4 values are valid.
     ===========================================================================
     """
-    # TODO (Part 5A): Replace the NotImplementedError below with steps 1-4
+    # TODO (Part 5A): Replace the NotImplementedError below with validation + return string
     raise NotImplementedError(
-        "TODO (Part 5A): Implement `run_q_learning_experiment` in `mcp_server.py`."
+        "TODO (Part 5A): Implement `verify_hyperparameters` in `mcp_server.py`."
     )
 
 
@@ -127,16 +117,18 @@ def list_context_docs() -> list[str]:
 
 
 @mcp.resource("vacuum://hyperparameters", mime_type="application/json")
-def get_hyperparameters_resource() -> Dict[str, Any]:
+def get_hyperparameters_resource() -> Dict[str, float]:
     """Direct resource exposing the selected Lab 5 hyperparameters as JSON (Slide 21).
 
     ===========================================================================
     TODO (Part 5B - MCP Resource Implementation, Slide 21):
-    Instantiate `params = Hyperparameters()` and return a dictionary containing:
-      - "living_reward": params.living_reward
-      - "discount_gamma": params.discount_gamma
-      - "learning_rate_alpha": params.learning_rate_alpha
-      - "exploration_epsilon": params.exploration_epsilon
+    Return a dictionary with your 4 chosen hyperparameters:
+      {
+          "living_reward": -0.04,
+          "discount_gamma": 0.90,
+          "learning_rate_alpha": 0.10,
+          "exploration_epsilon": 0.20,
+      }
     ===========================================================================
     """
     # TODO (Part 5B): Replace the NotImplementedError below with the dictionary return
@@ -151,7 +143,7 @@ def get_hyperparameters_resource() -> Dict[str, Any]:
 
 @mcp.prompt(
     name="audit_hyperparameters",
-    description="Ready-made expert prompt instructing Claude to audit the Q-learning hyperparameters and policy.",
+    description="Ready-made expert prompt instructing the agent to solve and audit the 4x4 Vacuum Q-Learning problem.",
 )
 def audit_hyperparameters_prompt(
     living_reward: str = Field(default="-0.04", description="Selected living reward value"),
@@ -160,10 +152,11 @@ def audit_hyperparameters_prompt(
 
     ===========================================================================
     TODO (Part 5C - MCP Prompt Implementation, Slide 25):
-    Return a prompt string instructing Claude to:
-    1. Call the `run_q_learning_experiment` tool with `living_reward`.
-    2. Verify that the learned policy routes around Obstacle `X` at `(1, 1)` and
-       Trap `-1` at `(3, 1)` to reach the Recharge Goal `+10` at `(3, 3)`.
+    Return a prompt string instructing the agent to:
+    1. Call `verify_hyperparameters` with `living_reward`.
+    2. Generate and run the 4x4 Vacuum Q-Learning solution in `src/` and verify
+       the policy avoids Obstacle `X` at `(1, 1)` and Trap `-1` at `(3, 1)` to
+       reach the Recharge Goal `+10` at `(3, 3)`.
     ===========================================================================
     """
     # TODO (Part 5C): Replace the NotImplementedError below with your prompt string
