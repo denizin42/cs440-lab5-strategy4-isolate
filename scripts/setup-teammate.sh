@@ -57,7 +57,7 @@ echo "==========================================================================
 # 1. Activate versioned Git hooks (blocks direct commits to main/master)
 echo "[1/4] Activating Git pre-commit hook (.githooks/pre-commit -> blocks direct main commits)..."
 chmod +x .githooks/pre-commit scripts/context-switcher.sh scripts/prevent-main-commit.sh \
-         .claude/skills/github-kanban-sync/scripts/sync-kanban.sh
+         scripts/changelog-add.sh .claude/skills/github-kanban-sync/scripts/sync-kanban.sh
 git config core.hooksPath .githooks
 cp .githooks/pre-commit .git/hooks/pre-commit
 

@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Git Pre-Commit Hook: Block Direct Commits to `main` / `master`
-# Enforces feature-branch workflow (e.g., feature/q-learning, feature/environment,
-# feature/exploration) which also powers `scripts/context-switcher.sh`.
+# Git Pre-Commit Hook:
+# 1. Block direct commits to `main` / `master`
+# 2. Enforce Keep a Changelog (`CHANGELOG.md`) update on every commit
 # ==============================================================================
 
 set -euo pipefail
 
 BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")"
 
+# --- Rule 1: Never commit directly to main or master ---
 if [[ "$BRANCH" == "main" || "$BRANCH" == "master" ]]; then
     echo "==============================================================================" >&2
     echo "ERROR [pre-commit]: Direct commits to '$BRANCH' are blocked!" >&2
@@ -17,6 +18,43 @@ if [[ "$BRANCH" == "main" || "$BRANCH" == "master" ]]; then
     echo "  git checkout -b feature/q-learning" >&2
     echo "  git checkout -b feature/environment" >&2
     echo "  git checkout -b feature/exploration" >&2
+    echo "==============================================================================" >&2
+    exit 1
+fi
+
+# --- Rule 2: Enforce Keep a Changelog (CHANGELOG.md) on every commit ---
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+CHANGELOG_FILE="$REPO_ROOT/CHANGELOG.md"
+
+if [[ ! -f "$CHANGELOG_FILE" ]]; then
+    echo "ERROR [pre-commit]: CHANGELOG.md is missing from repository root!" >&2
+    exit 1
+fi
+
+if ! git diff --cached --name-only | grep -qx "CHANGELOG.md"; then
+    echo "==============================================================================" >&2
+    echo "ERROR [pre-commit]: Keep a Changelog check failed — CHANGELOG.md is not staged!" >&2
+    echo "" >&2
+    echo "Every commit must document its changes in CHANGELOG.md under '## [Unreleased]'." >&2
+    echo "Quickly add an entry and stage CHANGELOG.md with:" >&2
+    echo "  bash scripts/changelog-add.sh Added \"Describe what you added\"" >&2
+    echo "  bash scripts/changelog-add.sh Changed \"Describe what you changed\"" >&2
+    echo "  bash scripts/changelog-add.sh Fixed \"Describe what you fixed\"" >&2
+    echo "==============================================================================" >&2
+    exit 1
+fi
+
+# Verify Keep a Changelog required structure in CHANGELOG.md
+if ! grep -q "^# Changelog" "$CHANGELOG_FILE" || \
+   ! grep -q "^## \[Unreleased\]" "$CHANGELOG_FILE" || \
+   ! grep -Eq "^### (Added|Changed|Deprecated|Removed|Fixed|Security)" "$CHANGELOG_FILE"; then
+    echo "==============================================================================" >&2
+    echo "ERROR [pre-commit]: CHANGELOG.md does not follow Keep a Changelog format!" >&2
+    echo "Required headers:" >&2
+    echo "  # Changelog" >&2
+    echo "  ## [Unreleased]" >&2
+    echo "  ### Added | Changed | Deprecated | Removed | Fixed | Security" >&2
+    echo "Reference: https://keepachangelog.com/en/1.1.0/" >&2
     echo "==============================================================================" >&2
     exit 1
 fi

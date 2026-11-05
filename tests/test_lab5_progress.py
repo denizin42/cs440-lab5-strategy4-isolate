@@ -48,14 +48,24 @@ class TestPart2HooksAndMemory:
     """Verifies Feature 1: Hooks (.claude/settings.json, scripts/context-switcher.sh, CLAUDE.md)."""
 
     def test_pre_commit_hook_blocks_main_branch(self) -> None:
-        """Verify `.githooks/pre-commit` and Claude `PreToolUse` hook block direct commits to `main`."""
+        """Verify `.githooks/pre-commit` and Claude `PreToolUse` hook block direct commits to `main` and enforce Keep a Changelog."""
         git_hook = REPO_ROOT / ".githooks" / "pre-commit"
         claude_pre_hook = REPO_ROOT / "scripts" / "prevent-main-commit.sh"
+        changelog_file = REPO_ROOT / "CHANGELOG.md"
+        changelog_helper = REPO_ROOT / "scripts" / "changelog-add.sh"
         settings_path = REPO_ROOT / ".claude" / "settings.json"
 
         assert git_hook.exists(), ".githooks/pre-commit must exist"
         assert claude_pre_hook.exists(), "scripts/prevent-main-commit.sh must exist"
-        assert "Direct commits to" in git_hook.read_text(encoding="utf-8")
+        assert changelog_file.exists(), "CHANGELOG.md must exist"
+        assert changelog_helper.exists(), "scripts/changelog-add.sh must exist"
+
+        hook_text = git_hook.read_text(encoding="utf-8")
+        assert "Direct commits to" in hook_text
+        assert "CHANGELOG.md" in hook_text and "Keep a Changelog" in hook_text
+
+        changelog_text = changelog_file.read_text(encoding="utf-8")
+        assert "# Changelog" in changelog_text and "## [Unreleased]" in changelog_text
 
         data = json.loads(settings_path.read_text(encoding="utf-8"))
         pre_tool_cmd = data["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
