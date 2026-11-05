@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- fixed tests for setting up idempotency guard for loading resources, setup CLAUDE settings.json to include the new hook for context switching from prompts
 - Keep a Changelog (`CHANGELOG.md`) enforcement in `.githooks/pre-commit` and Claude `PreToolUse` hook.
 - Helper script `scripts/changelog-add.sh` for appending entries under `## [Unreleased]` and staging `CHANGELOG.md`.
 - Multi-agent teammate onboarding script (`scripts/setup-teammate.sh`) and `TEAM_ONBOARDING.md`.

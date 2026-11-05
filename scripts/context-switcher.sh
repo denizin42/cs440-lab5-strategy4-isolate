@@ -36,7 +36,8 @@ touch "$CLAUDE_MD"
 add_context() {
     local context_ref="$1"
     # TODO (Part 2B): Replace the line below with the grep -qxF idempotency guard
-    return 1
+    grep -qxF "$context_ref" "$CLAUDE_MD" || echo "$context_ref" >> "$CLAUDE_MD"
+    return $CLAUDE_MD
 }
 
 # --- 1. Branch-based context selection (Slides 25 & 27) ---
