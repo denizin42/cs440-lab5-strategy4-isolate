@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Resolved all pylint warnings in mcp_server.py and tests/test_lab5_progress.py (10.00/10)
+
 ### Added
 - fixed tests for setting up idempotency guard for loading resources, setup CLAUDE settings.json to include the new hook for context switching from prompts
 - Keep a Changelog (`CHANGELOG.md`) enforcement in `.githooks/pre-commit` and Claude `PreToolUse` hook.
