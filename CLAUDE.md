@@ -86,9 +86,11 @@ Row \ Col    0        1        2        3
 3. **Generate Model-Free Q-Learning Implementation in `src/`**:
    - Create `src/__init__.py`, `src/environment.py` (`VacuumGridEnv` with private $T$ and $R$), `src/agent.py` (`QLearningHyperparameters` and `TabularQLearningAgent` supporting both `epsilon_greedy` and `optimistic` $f(u, n) = u + k/(n+1)$ with $k=2.0$), `src/q_learning.py`, and `tests/test_q_learning.py`.
    - Enforce PEP 484 type annotations, lines `<= 100` characters, module/class/function docstrings, zero future bootstrap (`0.0`) when `done=True`, and uniform random tie-breaking.
-4. **Execute Full Learning Experiment & Publish Report**:
-   - Run `python3 -m src.q_learning` to train for **10,000 episodes** (`max_steps=100`, `seed=42`) and evaluate the greedy policy ($\epsilon = 0$) over **1,000 test episodes** for both `epsilon_greedy` and `optimistic` exploration modes.
-   - Print the learned state utilities $V(s) = \max_a Q(s, a)$, greedy policy grid $\pi^*(s) = \arg\max_a Q(s, a)$, and evaluation metrics to stdout, and write the complete report (including full $Q(s, a)$ and visit count $N(s, a)$ tables) to `EXPERIMENT_REPORT.md`.
+4. **Execute Full Learning Experiment, Hyperparameter Sensitivity Sweep & Publish Report**:
+   - Run `python3 -m src.q_learning` to:
+     - Train for **10,000 episodes** (`max_steps=100`, `seed=42`) and evaluate the greedy policy ($\epsilon = 0$) over **1,000 test episodes** for both `epsilon_greedy` and `optimistic` exploration modes using the baseline hyperparameters (`living_reward=-0.04, discount_gamma=0.90, learning_rate_alpha=0.10, exploration_epsilon=0.20`).
+     - Run a **4-dimensional hyperparameter sensitivity sweep** (varying `living_reward` in `{-0.04, -0.50, -2.50}`, `discount_gamma` in `{0.50, 0.90, 0.99}`, `learning_rate_alpha` in `{0.01, 0.10, 0.80}`, and `exploration_epsilon` in `{0.05, 0.20, 0.50}`) validated by `verify_hyperparameters` in `mcp_server.py`.
+   - Print the learned state utilities $V(s) = \max_a Q(s, a)$, greedy policy grid $\pi^*(s) = \arg\max_a Q(s, a)$, evaluation metrics, and hyperparameter sweep summary table to stdout, and write the complete report (including full $Q(s, a)$, visit count $N(s, a)$, and sensitivity sweep tables) to `EXPERIMENT_REPORT.md`.
 5. **Delegate Sub-Agent Audits (Strategy 4: Isolate)**:
    - Invoke the isolated `code-reviewer` sub-agent to audit `src/` for model-free $T/R$ encapsulation, terminal state boundaries, and type safety.
    - Invoke the isolated `researcher` sub-agent to compare $\epsilon$-greedy vs. optimistic exploration $f(u, n)$ and include its summary in `EXPERIMENT_REPORT.md`.

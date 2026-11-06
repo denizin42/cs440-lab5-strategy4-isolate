@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Git `pre-commit` and Claude `PreToolUse` hooks blocking direct commits to `main`.
 
 ### Changed
+- Update CLAUDE.md autonomous zero-prompt protocol to include the 4-dimensional hyperparameter sensitivity sweep
 - Differentiated `CLAUDE.md` and `README.md` between Strategy 1 (Write) and Strategy 4 (Isolate).
 - Configured `.vscode/settings.json` and `pytest.ini` (`--import-mode=importlib`) for VS Code Test Explorer discovery.
 
