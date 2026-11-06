@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from src.agent import QLearningHyperparameters, TabularQLearningAgent
 from src.environment import ACTIONS, VacuumGridEnv
-from src.q_learning import train_q_learning
+from src.q_learning import run_hyperparameter_sweep, train_q_learning
 
 
 def test_environment_topology_and_terminal_boundaries() -> None:
@@ -59,3 +59,17 @@ def test_q_learning_converges_to_goal_avoiding_trap() -> None:
     assert agent.greedy_action((3, 0)) == "Up"
     assert agent.state_value((2, 3)) > agent.state_value((0, 0)) > 0.0
     assert env.goal_state == (3, 3)
+
+
+def test_hyperparameter_sensitivity_sweep() -> None:
+    """Verify varying living_reward, gamma, alpha, and epsilon shifts V(s) and pi*(s)."""
+    rows, _, extreme_agent = run_hyperparameter_sweep(episodes=1500)
+    assert len(rows) == 9
+    by_label = {row.label: row for row in rows}
+    baseline = by_label["Baseline (r=-0.04, g=0.90, a=0.10, e=0.20)"]
+    myopic = by_label["Discount gamma = 0.50 (Myopic Horizon)"]
+    far_sighted = by_label["Discount gamma = 0.99 (Far-Sighted)"]
+    assert myopic.v_start < baseline.v_start < far_sighted.v_start
+    assert baseline.policies[0] == "Up"
+    assert extreme_agent.greedy_action((1, 0)) == "Down"
+    assert extreme_agent.greedy_action((3, 0)) == "Right"

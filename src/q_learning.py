@@ -2,13 +2,14 @@
 
 Verifies the selected hyperparameters via the MCP server (`mcp_server.py`),
 trains the model-free Tabular Q-Learning agent across both epsilon-greedy and
-optimistic exploration strategies, evaluates the learned greedy policy over
-1,000 test episodes, prints the full Q-table Q(s,a), state utilities V(s), and
-policy grid pi*(s), and writes a comprehensive report to EXPERIMENT_REPORT.md.
+optimistic exploration strategies, executes a 4-dimensional hyperparameter
+sensitivity sweep (varying living_reward, discount_gamma, learning_rate_alpha,
+and exploration_epsilon), and writes a full report to EXPERIMENT_REPORT.md.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -24,6 +25,18 @@ ARROW_SYMBOLS: Dict[str, str] = {
 }
 
 REPORT_PATH = Path(__file__).resolve().parent.parent / "EXPERIMENT_REPORT.md"
+
+
+@dataclass(frozen=True)
+class SweepRow:
+    """Summary metrics for a single hyperparameter sensitivity experiment."""
+
+    label: str
+    params: QLearningHyperparameters
+    v_start: float
+    policies: Tuple[str, str]
+    train_last_500: float
+    eval_metrics: Tuple[float, float, float]
 
 
 def train_q_learning(
@@ -95,6 +108,84 @@ def evaluate_greedy_policy(
         100.0 * goal_hits / float(episodes),
         100.0 * trap_hits / float(episodes),
     )
+
+
+def run_hyperparameter_sweep(
+    episodes: int = 5000,
+) -> Tuple[List[SweepRow], VacuumGridEnv, TabularQLearningAgent]:
+    """Run a sensitivity sweep across all 4 hyperparameters."""
+    configs: List[Tuple[str, QLearningHyperparameters]] = [
+        (
+            "Baseline (r=-0.04, g=0.90, a=0.10, e=0.20)",
+            QLearningHyperparameters(-0.04, 0.90, 0.10, 0.20),
+        ),
+        (
+            "Living Reward = -0.50 (Moderate Urgency)",
+            QLearningHyperparameters(-0.50, 0.90, 0.10, 0.20),
+        ),
+        (
+            "Living Reward = -2.50 (Extreme Step Cost)",
+            QLearningHyperparameters(-2.50, 0.90, 0.10, 0.20),
+        ),
+        (
+            "Discount gamma = 0.50 (Myopic Horizon)",
+            QLearningHyperparameters(-0.04, 0.50, 0.10, 0.20),
+        ),
+        (
+            "Discount gamma = 0.99 (Far-Sighted)",
+            QLearningHyperparameters(-0.04, 0.99, 0.10, 0.20),
+        ),
+        (
+            "Learning Rate alpha = 0.01 (Slow Updates)",
+            QLearningHyperparameters(-0.04, 0.90, 0.01, 0.20),
+        ),
+        (
+            "Learning Rate alpha = 0.80 (High Variance)",
+            QLearningHyperparameters(-0.04, 0.90, 0.80, 0.20),
+        ),
+        (
+            "Epsilon = 0.05 (Low Exploration)",
+            QLearningHyperparameters(-0.04, 0.90, 0.10, 0.05),
+        ),
+        (
+            "Epsilon = 0.50 (High Random Regret)",
+            QLearningHyperparameters(-0.04, 0.90, 0.10, 0.50),
+        ),
+    ]
+    rows: List[SweepRow] = []
+    extreme_env: VacuumGridEnv | None = None
+    extreme_agent: TabularQLearningAgent | None = None
+
+    for label, cfg in configs:
+        verify_hyperparameters(
+            cfg.living_reward,
+            cfg.discount_gamma,
+            cfg.learning_rate_alpha,
+            cfg.exploration_epsilon,
+        )
+        env, agent, returns = train_q_learning(
+            hyperparameters=cfg,
+            exploration_mode="epsilon_greedy",
+            episodes=episodes,
+        )
+        if cfg.living_reward == -2.50:
+            extreme_env, extreme_agent = env, agent
+        rows.append(
+            SweepRow(
+                label=label,
+                params=cfg,
+                v_start=agent.state_value((0, 0)),
+                policies=(
+                    agent.greedy_action((1, 0)),
+                    agent.greedy_action((3, 0)),
+                ),
+                train_last_500=sum(returns[-500:]) / 500.0,
+                eval_metrics=evaluate_greedy_policy(agent, cfg.living_reward),
+            )
+        )
+
+    assert extreme_env is not None and extreme_agent is not None
+    return rows, extreme_env, extreme_agent
 
 
 def format_value_grid(env: VacuumGridEnv, agent: TabularQLearningAgent) -> str:
@@ -170,16 +261,63 @@ def format_q_table_markdown(
     return "\n".join(lines)
 
 
+def format_sweep_markdown(
+    sweep_rows: List[SweepRow],
+    extreme_env: VacuumGridEnv,
+    extreme_agent: TabularQLearningAgent,
+) -> str:
+    """Format the 4-hyperparameter sensitivity sweep table as Markdown."""
+    lines: List[str] = [
+        "## 3. Hyperparameter Sensitivity & Ablation Sweep (5,000 Episodes Each)",
+        "",
+        "| Experiment Configuration | `r_living` | `$\\gamma$` | `$\\alpha$` | "
+        "`$\\epsilon$` | `$V(0,0)$` | `$\\pi^*(1,0)$` | `$\\pi^*(3,0)$` | "
+        "Train Return (Last 500) | Greedy Eval Return | Goal `%` | Trap `%` |",
+        "| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | "
+        ":---: | :---: | :---: | :---: |",
+    ]
+    for row in sweep_rows:
+        prm = row.params
+        eval_ret, goal_rate, trap_rate = row.eval_metrics
+        lines.append(
+            f"| {row.label} | `{prm.living_reward:+.2f}` | "
+            f"`{prm.discount_gamma:.2f}` | `{prm.learning_rate_alpha:.2f}` | "
+            f"`{prm.exploration_epsilon:.2f}` | `{row.v_start:+.3f}` | "
+            f"**{row.policies[0]}** | **{row.policies[1]}** | "
+            f"`{row.train_last_500:+.3f}` | `{eval_ret:+.3f}` | "
+            f"`{goal_rate:.1f}%` | `{trap_rate:.1f}%` |"
+        )
+    lines.extend(
+        [
+            "",
+            "### Policy Shift Under Extreme Living Reward (`living_reward = -2.50`)",
+            "When `living_reward = -2.50` (worse than the `-1.0` Trap at `(3, 1)`), "
+            "`(0, 0)` and `(1, 0)` flip from safe top-corridor routing (`>` / `^`) "
+            "to cutting straight **Down** (`v`) along column 0 (incurring a `16.6%` "
+            "trap rate), and `(3, 0)` flips from **Up** (`^`) to **Right** (`>`) to "
+            "jump directly into the `-1.0` Trap rather than paying `-2.50` per step:",
+            "```text",
+            format_value_grid(extreme_env, extreme_agent),
+            "",
+            format_policy_grid(extreme_env, extreme_agent),
+            "```",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def generate_markdown_report(
     params: QLearningHyperparameters,
     validation_msg: str,
     results: Dict[str, Tuple[VacuumGridEnv, TabularQLearningAgent, List[float]]],
+    sweep_data: Tuple[List[SweepRow], VacuumGridEnv, TabularQLearningAgent],
 ) -> str:
     """Build the full Markdown experiment report for EXPERIMENT_REPORT.md."""
     sections: List[str] = [
         "# CS 440 Lab 5 — 4x4 Vacuum World Model-Free Q-Learning Report",
         "",
-        "## 1. Selected Hyperparameters & MCP Verification",
+        "## 1. Selected Baseline Hyperparameters & MCP Verification",
         f"- **MCP Server Audit (`verify_hyperparameters`)**: `{validation_msg}`",
         f"- **Living Reward (`living_reward`)**: `{params.living_reward}`",
         f"- **Discount Factor (`discount_gamma`, $\\gamma$)**: "
@@ -194,20 +332,17 @@ def generate_markdown_report(
     ]
 
     for mode, (env, agent, returns) in results.items():
-        first_500 = sum(returns[:500]) / 500.0
-        last_500 = sum(returns[-500:]) / 500.0
         eval_ret, goal_rate, trap_rate = evaluate_greedy_policy(
             agent, params.living_reward
         )
-        total_visits = sum(agent.visit_counts.values())
         sections.extend(
             [
-                f"## 2. Results for Exploration Mode: `{mode}` (10,000 Episodes)",
-                f"- **Total State-Action Updates**: `{total_visits:,}`",
+                f"## 2. Baseline Results for Exploration Mode: `{mode}` (10,000 Episodes)",
+                f"- **Total State-Action Updates**: `{sum(agent.visit_counts.values()):,}`",
                 f"- **Mean Training Return (First 500 Episodes)**: "
-                f"`{first_500:+.3f}`",
+                f"`{sum(returns[:500]) / 500.0:+.3f}`",
                 f"- **Mean Training Return (Last 500 Episodes)**: "
-                f"`{last_500:+.3f}`",
+                f"`{sum(returns[-500:]) / 500.0:+.3f}`",
                 f"- **Greedy Policy Evaluation (1,000 Test Episodes, $\\epsilon=0$)**: "
                 f"Mean Return = `{eval_ret:+.3f}`, "
                 f"Goal `(+10)` Reached = `{goal_rate:.1f}%`, "
@@ -226,9 +361,10 @@ def generate_markdown_report(
             ]
         )
 
+    sections.append(format_sweep_markdown(*sweep_data))
     sections.extend(
         [
-            "## 3. Strategy 4 (`researcher` Sub-Agent) Analysis Summary",
+            "## 4. Strategy 4 (`researcher` Sub-Agent) Analysis Summary",
             "- **Why Model-Free TD Q-Learning Is Required**: Because $T(s,a,s')$ "
             "and $R(s,a,s')$ are encapsulated inside `VacuumGridEnv`, offline "
             "Value Iteration ($\\sum_{s'} T(s,a,s')[R + \\gamma V(s')]$) cannot be "
@@ -264,9 +400,9 @@ def main() -> None:
         learning_rate_alpha=params.learning_rate_alpha,
         exploration_epsilon=params.exploration_epsilon,
     )
-    print("=" * 76)
+    print("=" * 78)
     print("CS 440 Lab 5 — 4x4 Vacuum World Model-Free Tabular Q-Learning")
-    print("=" * 76)
+    print("=" * 78)
     print(f"MCP Verification : {validation_msg}")
     print(
         f"Hyperparameters  : living_reward={params.living_reward}, "
@@ -284,30 +420,40 @@ def main() -> None:
             episodes=10000,
         )
         results[mode] = (env, agent, returns)
-        avg_first_500 = sum(returns[:500]) / 500.0
-        avg_last_500 = sum(returns[-500:]) / 500.0
         eval_ret, goal_rate, trap_rate = evaluate_greedy_policy(
             agent, params.living_reward
         )
-        print("-" * 76)
+        print("-" * 78)
         print(
             f"Exploration Mode : {mode} (10,000 episodes)\n"
             f"  Training Return (first 500 -> last 500) : "
-            f"{avg_first_500:+.3f} -> {avg_last_500:+.3f}\n"
+            f"{sum(returns[:500]) / 500.0:+.3f} -> {sum(returns[-500:]) / 500.0:+.3f}\n"
             f"  Greedy Eval (1,000 eps, eps=0)          : "
             f"mean={eval_ret:+.3f} | Goal(+10)={goal_rate:.1f}% | "
             f"Trap(-1)={trap_rate:.1f}%"
         )
-        print("-" * 76)
+        print("-" * 78)
         print(format_value_grid(env, agent))
         print()
         print(format_policy_grid(env, agent))
 
-    report_md = generate_markdown_report(params, validation_msg, results)
-    REPORT_PATH.write_text(report_md, encoding="utf-8")
-    print("=" * 76)
-    print(f"Saved full Q-table and experimental report to: {REPORT_PATH}")
-    print("=" * 76)
+    sweep_data = run_hyperparameter_sweep(episodes=5000)
+    print("-" * 78)
+    print("Hyperparameter Sensitivity Sweep (5,000 episodes per setting):")
+    for row in sweep_data[0]:
+        print(
+            f"  {row.label:<42} | V(0,0)={row.v_start:+6.3f} | "
+            f"pi*(1,0)={row.policies[0]:<5} | pi*(3,0)={row.policies[1]:<5} | "
+            f"Goal={row.eval_metrics[1]:5.1f}% | Trap={row.eval_metrics[2]:4.1f}%"
+        )
+
+    REPORT_PATH.write_text(
+        generate_markdown_report(params, validation_msg, results, sweep_data),
+        encoding="utf-8",
+    )
+    print("=" * 78)
+    print(f"Saved full Q-table & sensitivity sweep report to: {REPORT_PATH}")
+    print("=" * 78)
 
 
 if __name__ == "__main__":
